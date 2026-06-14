@@ -1,4 +1,4 @@
-from apps.transactions.models import Transaction
+from apps.transactions.models import Transaction, IdempotencyKey
 from apps.transactions.rules import RuleEngine
 
 
@@ -8,6 +8,14 @@ class TransactionService:
         self.rule_engine = RuleEngine()
 
     def process(self, tx_data, idempotency_key):
+
+        # lookup
+        existing = IdempotencyKey.objects.select_related("transaction").filter(
+            key=idempotency_key
+        ).first()
+
+        if existing:
+            return existing.transaction
 
         # screen
         verdict = self.rule_engine.evaluate(tx_data)
@@ -25,5 +33,7 @@ class TransactionService:
             reasons=verdict.reasons,
             idempotency_key=idempotency_key,
         )
+
+        IdempotencyKey.objects.create(key=idempotency_key, transaction=transaction)
 
         return transaction
