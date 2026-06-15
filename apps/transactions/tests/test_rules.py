@@ -115,6 +115,19 @@ class TestRuleEngine:
         assert result.score >= 60
 
     @pytest.mark.django_db
+    def test_needs_review_on_geo_mismatch(self):
+
+        engine = RuleEngine()
+        result = engine.evaluate({
+            "amount": 10_000,
+            "user_id": "user-geo",
+            "location": "Jakarta",
+            "user_location": "Surabaya",
+        })
+        assert result.status == "NEEDS_REVIEW"
+        assert result.score == 30
+
+    @pytest.mark.django_db
     def test_auto_approve_on_clean_tx(self):
 
         engine = RuleEngine()
