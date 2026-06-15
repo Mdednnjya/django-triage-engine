@@ -33,6 +33,8 @@ class TestTransactionService:
         }
 
         first = service.process(tx_data, "idem-2")
+
+        # duplicate
         second = service.process(tx_data, "idem-2")
 
         assert first.id == second.id

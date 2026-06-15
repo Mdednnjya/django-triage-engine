@@ -45,6 +45,7 @@ class TestFrequencyRule:
 
         from apps.transactions.models import Transaction
 
+        # seed
         for i in range(6):
             Transaction.objects.create(
                 amount=10_000,
