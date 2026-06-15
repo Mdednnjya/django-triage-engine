@@ -105,6 +105,7 @@ class TestGeoMismatchRule:
 
 class TestRuleEngine:
 
+    @pytest.mark.django_db
     def test_auto_block_on_high_score(self):
 
         engine = RuleEngine()
@@ -112,6 +113,7 @@ class TestRuleEngine:
         assert result.status == "AUTO_BLOCK"
         assert result.score >= 60
 
+    @pytest.mark.django_db
     def test_auto_approve_on_clean_tx(self):
 
         engine = RuleEngine()
