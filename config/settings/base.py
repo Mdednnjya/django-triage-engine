@@ -17,6 +17,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.accounts",
     "apps.transactions",
+    "apps.enrichment",
 ]
 
 MIDDLEWARE = [
@@ -70,3 +71,13 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+
+CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = config("REDIS_URL", default="redis://localhost:6379/0")
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_TRACK_STARTED = True
+
+MONGO_URI = config("MONGO_URI", default="mongodb://localhost:27017")
+MONGO_DB = config("MONGO_DB", default="triage_enrichment")
