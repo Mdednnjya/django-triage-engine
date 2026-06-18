@@ -6,6 +6,9 @@ from apps.transactions.serializers import WebhookSerializer
 from apps.transactions.services import TransactionService
 
 
+FLAGGED = {"NEEDS_REVIEW", "AUTO_BLOCK"}
+
+
 class WebhookView(APIView):
 
     def post(self, request):
@@ -20,6 +23,11 @@ class WebhookView(APIView):
             idempotency_key=serializer.validated_data["idempotency_key"],
         )
 
+        # enqueue
+        if transaction.status in FLAGGED:
+            from apps.enrichment.tasks import enrich_transaction
+            enrich_transaction.delay(str(transaction.id))
+
         return Response(
             {
                 "transaction_id": str(transaction.id),
@@ -27,5 +35,5 @@ class WebhookView(APIView):
                 "risk_score": transaction.risk_score,
                 "reasons": transaction.reasons,
             },
-            status=status.HTTP_200_OK,
+            status=status.HTTP_202_ACCEPTED,
         )
