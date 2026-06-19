@@ -11,6 +11,18 @@ logger = logging.getLogger(__name__)
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 
+_SYSTEM_PROMPT = (
+    "You are a financial risk analyst reviewing flagged transactions. "
+    "Always respond with valid JSON only. No preamble, no markdown, "
+    "no code fences, no explanation outside the JSON object. "
+    "Never deviate from the required structure: "
+    '{"summary": "...", "risk_factors": [...], "recommended_action": "...", "confidence": "..."} '
+    "confidence definition: "
+    "high: risk_score >= 50 or critical rule triggered; "
+    "medium: risk_score 30-49, multiple rules triggered; "
+    "low: borderline score, single rule triggered"
+)
+
 
 class EnrichmentService:
 
@@ -36,15 +48,22 @@ class EnrichmentService:
             },
             json={
                 "model": config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": False, 
+                "messages": [
+                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {"role": "user", "content": prompt},
+                ],
+                "stream": False,
             },
             timeout=30,
         )
 
 
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        content = response.json()["choices"][0]["message"]["content"].strip()
+
+        # strip markdown code fences if model ignores instruction
+        if content.startswith("```"):
+            content = content.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 
         try:
             return json.loads(content)
@@ -61,11 +80,5 @@ class EnrichmentService:
             f"Merchant: {transaction.merchant_name}\n"
             f"Location: {transaction.location}\n"
             f"Risk score: {transaction.risk_score}\n"
-            f"Triggered rules: {rules}\n\n"
-            f"Respond with only valid JSON. No preamble, no markdown, no code fences.\n"
-            f"Use this exact structure:\n"
-            f'{{"summary": "brief one-line description of why this is flagged", '
-            f'"risk_factors": ["factor 1", "factor 2"], '
-            f'"recommended_action": "Hold and investigate / Monitor / Escalate", '
-            f'"confidence": "low / medium / high"}}'
+            f"Triggered rules: {rules}"
         )
