@@ -7,6 +7,7 @@ from rest_framework import status
 from apps.transactions.models import Transaction
 from apps.transactions.serializers import WebhookSerializer
 from apps.transactions.services import TransactionService
+from apps.enrichment import documents
 
 
 FLAGGED = {"NEEDS_REVIEW", "AUTO_BLOCK"}
@@ -35,6 +36,12 @@ class WebhookView(APIView):
                     enrich_transaction.delay(str(locked.id))
                     locked.enrichment_queued = True
                     locked.save(update_fields=["enrichment_queued"])
+                    documents.save(
+                        transaction_id=locked.id,
+                        explanation=None,
+                        status="QUEUED",
+                        model=None,
+                    )
 
         return Response(
             {

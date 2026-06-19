@@ -40,21 +40,25 @@ class TestWebhookView:
     def test_duplicate_idempotency_key_returns_same_transaction(self):
 
         with patch("apps.enrichment.tasks.enrich_transaction.delay"):
-            first = self.client.post(self.url, self.flagged_payload, format="json")
-            assert first.status_code == 202
 
-            # duplicate
-            second = self.client.post(self.url, self.flagged_payload, format="json")
-            assert second.status_code == 202
-            assert first.data["transaction_id"] == second.data["transaction_id"]
+            with patch("apps.enrichment.documents.save"):
+                first = self.client.post(self.url, self.flagged_payload, format="json")
+                assert first.status_code == 202
+
+                # duplicate
+                second = self.client.post(self.url, self.flagged_payload, format="json")
+                assert second.status_code == 202
+                assert first.data["transaction_id"] == second.data["transaction_id"]
 
     def test_duplicate_webhook_does_not_double_enqueue(self):
 
         with patch("apps.enrichment.tasks.enrich_transaction.delay") as mock_delay:
-            self.client.post(self.url, self.flagged_payload, format="json")
+            
+            with patch("apps.enrichment.documents.save"):
+                self.client.post(self.url, self.flagged_payload, format="json")
 
-            # duplicate
-            self.client.post(self.url, self.flagged_payload, format="json")
+                # duplicate
+                self.client.post(self.url, self.flagged_payload, format="json")
 
-            # enrich_transaction.delay called exactly once
-            assert mock_delay.call_count == 1
+                # enrich_transaction.delay called exactly once
+                assert mock_delay.call_count == 1

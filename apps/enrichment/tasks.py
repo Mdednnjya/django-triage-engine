@@ -11,18 +11,17 @@ def enrich_transaction(self, transaction_id):
     try:
         transaction = Transaction.objects.get(id=transaction_id)
 
-        # call
+        # processing
+        documents.update(transaction_id, "PROCESSING")
+
         service = EnrichmentService()
         service.enrich(transaction)
 
     except Exception as exc:
+
         if self.request.retries >= self.max_retries:
             # exhausted
-            documents.save(
-                transaction_id=transaction_id,
-                explanation=None,
-                status="FAILED",
-                model=None,
-            )
+            documents.update(transaction_id, "FAILED")
+            
         else:
             raise self.retry(exc=exc, countdown=60)

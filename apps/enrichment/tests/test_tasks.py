@@ -22,12 +22,7 @@ class TestEnrichTransaction:
         )
 
         with patch("apps.enrichment.services.EnrichmentService.enrich", side_effect=Exception("timeout")):
-            with patch("apps.enrichment.documents.save") as mock_save:
+            with patch("apps.enrichment.documents.update") as mock_update:
                 enrich_transaction.apply(args=[str(transaction.id)])
 
-                mock_save.assert_called_once_with(
-                    transaction_id=str(transaction.id),
-                    explanation=None,
-                    status="FAILED",
-                    model=None,
-                )
+                mock_update.assert_any_call(str(transaction.id), "FAILED")

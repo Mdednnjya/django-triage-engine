@@ -21,6 +21,20 @@ def save(transaction_id, explanation, status, model):
     })
 
 
+def update(transaction_id, status, explanation=None, model=None):
+
+    fields = {"enrichment_status": status}
+    if explanation is not None:
+        fields["explanation"] = explanation
+    if model is not None:
+        fields["model"] = model
+
+    _collection().update_one(
+        {"transaction_id": str(transaction_id)},
+        {"$set": fields},
+    )
+
+
 def find_by_transaction_ids(transaction_ids):
 
     ids = [str(tid) for tid in transaction_ids]

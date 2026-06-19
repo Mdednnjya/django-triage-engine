@@ -30,7 +30,7 @@ class DashboardView(APIView):
                 "currency": tx.currency,
                 "created_at": tx.created_at.isoformat(),
                 "explanation": enrichment.get("explanation"),
-                "enrichment_status": enrichment.get("enrichment_status", "PENDING"),
+                "enrichment_status": enrichment.get("enrichment_status", "QUEUED"),
             })
 
         return Response(results, status=status.HTTP_200_OK)

@@ -30,16 +30,16 @@ class TestEnrichmentService:
         mock_response.raise_for_status = MagicMock()
 
         with patch("apps.enrichment.services.requests.post", return_value=mock_response):
-            with patch("apps.enrichment.documents.save") as mock_save:
+            with patch("apps.enrichment.documents.update") as mock_update:
 
                 # call
                 service = EnrichmentService()
                 service.enrich(transaction)
 
-                mock_save.assert_called_once_with(
-                    transaction_id=transaction.id,
+                mock_update.assert_called_once_with(
+                    transaction.id,
+                    "COMPLETED",
                     explanation="Suspicious due to high amount.",
-                    status="DONE",
                     model=ANY,
                 )
 

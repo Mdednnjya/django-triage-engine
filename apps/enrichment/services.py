@@ -12,10 +12,10 @@ class EnrichmentService:
     def enrich(self, transaction):
 
         explanation = self._call_llm(transaction)
-        documents.save(
-            transaction_id=transaction.id,
+        documents.update(
+            transaction.id,
+            "COMPLETED",
             explanation=explanation,
-            status="DONE",
             model=config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
         )
 
