@@ -1,26 +1,66 @@
 services:
   postgres:
     image: postgres:16
+
     environment:
       POSTGRES_DB: triage_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+
     ports:
       - "5433:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   mongo:
     image: mongo:7
+
     ports:
       - "27017:27017"
+
     volumes:
       - mongo_data:/data/db
 
   redis:
     image: redis:7
+
     ports:
       - "6379:6379"
+
+  app:
+  
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    env_file: .env
+    
+    environment:
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      MONGO_URI: mongodb://mongo:27017/pytriage
+      
+    depends_on:
+      - postgres
+      - mongo
+      - redis
+
+  worker:
+
+    build: .
+    command: celery -A config worker --loglevel=info
+    env_file: .env
+
+    environment:
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      MONGO_URI: mongodb://mongo:27017/pytriage
+
+    depends_on:
+      - postgres
+      - mongo
+      - redis
 
 volumes:
   postgres_data:
