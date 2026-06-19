@@ -22,6 +22,7 @@ class Transaction(models.Model):
     risk_score = models.IntegerField(default=0)
     reasons = models.JSONField(default=list)
     idempotency_key = models.CharField(max_length=255, unique=True)
+    enrichment_queued = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
