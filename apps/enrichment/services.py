@@ -1,7 +1,12 @@
+import json
+import logging
+
 import requests
 from decouple import config
 
 from apps.enrichment import documents
+
+logger = logging.getLogger(__name__)
 
 
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -39,7 +44,13 @@ class EnrichmentService:
 
 
         response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+        content = response.json()["choices"][0]["message"]["content"]
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            logger.error("malformed json from llm: %s", content)
+            raise
 
     def _build_prompt(self, transaction):
 
@@ -51,6 +62,10 @@ class EnrichmentService:
             f"Location: {transaction.location}\n"
             f"Risk score: {transaction.risk_score}\n"
             f"Triggered rules: {rules}\n\n"
-            f"In 2-3 sentences, explain why this transaction may be suspicious "
-            f"and what a reviewer should look for."
+            f"Respond with only valid JSON. No preamble, no markdown, no code fences.\n"
+            f"Use this exact structure:\n"
+            f'{{"summary": "brief one-line description of why this is flagged", '
+            f'"risk_factors": ["factor 1", "factor 2"], '
+            f'"recommended_action": "Hold and investigate / Monitor / Escalate", '
+            f'"confidence": "low / medium / high"}}'
         )

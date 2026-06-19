@@ -25,7 +25,7 @@ class TestEnrichmentService:
 
         mock_response = MagicMock()
         mock_response.json.return_value = {
-            "choices": [{"message": {"content": "Suspicious due to high amount."}}]
+            "choices": [{"message": {"content": '{"summary": "High amount transaction", "risk_factors": ["amount exceeds threshold"], "recommended_action": "Hold and investigate", "confidence": "high"}'}}]
         }
         mock_response.raise_for_status = MagicMock()
 
@@ -39,7 +39,12 @@ class TestEnrichmentService:
                 mock_update.assert_called_once_with(
                     transaction.id,
                     "COMPLETED",
-                    explanation="Suspicious due to high amount.",
+                    explanation={
+                        "summary": "High amount transaction",
+                        "risk_factors": ["amount exceeds threshold"],
+                        "recommended_action": "Hold and investigate",
+                        "confidence": "high",
+                    },
                     model=ANY,
                 )
 
