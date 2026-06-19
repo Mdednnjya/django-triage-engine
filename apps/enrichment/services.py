@@ -22,6 +22,7 @@ class EnrichmentService:
     def _call_llm(self, transaction):
 
         prompt = self._build_prompt(transaction)
+
         response = requests.post(
             OPENROUTER_URL,
             headers={
@@ -31,9 +32,12 @@ class EnrichmentService:
             json={
                 "model": config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
                 "messages": [{"role": "user", "content": prompt}],
+                "stream": False, 
             },
             timeout=30,
         )
+
+
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
 

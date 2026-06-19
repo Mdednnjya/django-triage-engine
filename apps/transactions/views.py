@@ -1,7 +1,10 @@
+from django.db import transaction as db_transaction
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 
+from apps.transactions.models import Transaction
 from apps.transactions.serializers import WebhookSerializer
 from apps.transactions.services import TransactionService
 
@@ -26,10 +29,12 @@ class WebhookView(APIView):
         # enqueue
         if transaction.status in FLAGGED:
             from apps.enrichment.tasks import enrich_transaction
-            from apps.enrichment import documents
-            already = documents.find_by_transaction_ids([transaction.id])
-            if not already:
-                enrich_transaction.delay(str(transaction.id))
+            with db_transaction.atomic():
+                locked = Transaction.objects.select_for_update().get(id=transaction.id)
+                if not locked.enrichment_queued:
+                    enrich_transaction.delay(str(locked.id))
+                    locked.enrichment_queued = True
+                    locked.save(update_fields=["enrichment_queued"])
 
         return Response(
             {
