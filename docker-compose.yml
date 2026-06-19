@@ -38,9 +38,10 @@ services:
     
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       REDIS_URL: redis://redis:6379/0
       MONGO_URI: mongodb://mongo:27017/pytriage
-      
+
     depends_on:
       - postgres
       - mongo
@@ -54,6 +55,7 @@ services:
 
     environment:
       DB_HOST: postgres
+      DB_PORT: 5432
       REDIS_URL: redis://redis:6379/0
       MONGO_URI: mongodb://mongo:27017/pytriage
 
