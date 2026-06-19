@@ -26,7 +26,10 @@ class WebhookView(APIView):
         # enqueue
         if transaction.status in FLAGGED:
             from apps.enrichment.tasks import enrich_transaction
-            enrich_transaction.delay(str(transaction.id))
+            from apps.enrichment import documents
+            already = documents.find_by_transaction_ids([transaction.id])
+            if not already:
+                enrich_transaction.delay(str(transaction.id))
 
         return Response(
             {
