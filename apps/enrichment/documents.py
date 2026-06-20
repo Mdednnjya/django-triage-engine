@@ -35,6 +35,14 @@ def update(transaction_id, status, explanation=None, model=None):
     )
 
 
+def update_status_if_not_terminal(transaction_id, status):
+
+    _collection().update_one(
+        {"transaction_id": str(transaction_id), "enrichment_status": {"$nin": ["COMPLETED", "FAILED"]}},
+        {"$set": {"enrichment_status": status}},
+    )
+
+
 def find_by_transaction_ids(transaction_ids):
 
     ids = [str(tid) for tid in transaction_ids]

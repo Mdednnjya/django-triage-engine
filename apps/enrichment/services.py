@@ -27,14 +27,24 @@ _SYSTEM_PROMPT = (
 class EnrichmentService:
 
     def enrich(self, transaction):
+        from apps.enrichment import circuit_breaker
 
-        explanation = self._call_llm(transaction)
-        documents.update(
-            transaction.id,
-            "COMPLETED",
-            explanation=explanation,
-            model=config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
-        )
+        if not circuit_breaker.allow_request():
+            documents.update_status_if_not_terminal(transaction.id, "PENDING")
+            return
+
+        try:
+            explanation = self._call_llm(transaction)
+            circuit_breaker.record_success()
+            documents.update(
+                transaction.id,
+                "COMPLETED",
+                explanation=explanation,
+                model=config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
+            )
+        except Exception:
+            circuit_breaker.record_failure()
+            raise
 
     def _call_llm(self, transaction):
 
