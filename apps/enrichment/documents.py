@@ -43,6 +43,15 @@ def update_status_if_not_terminal(transaction_id, status):
     )
 
 
+def find_pending_older_than(cutoff):
+    return list(
+        _collection().find(
+            {"enrichment_status": "PENDING", "created_at": {"$lt": cutoff}},
+            {"transaction_id": 1, "_id": 0},
+        )
+    )
+
+
 def find_by_transaction_ids(transaction_ids):
 
     ids = [str(tid) for tid in transaction_ids]

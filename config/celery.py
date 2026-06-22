@@ -6,3 +6,10 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 app = Celery("triage")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 app.autodiscover_tasks()
+
+app.conf.beat_schedule = {
+    "reconcile-pending-enrichments": {
+        "task": "apps.enrichment.reconciliation.reconcile_pending",
+        "schedule": 300.0,
+    },
+}
