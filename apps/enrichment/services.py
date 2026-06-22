@@ -27,6 +27,7 @@ _SYSTEM_PROMPT = (
 class EnrichmentService:
 
     def enrich(self, transaction):
+
         from apps.enrichment import circuit_breaker
 
         if not circuit_breaker.allow_request():

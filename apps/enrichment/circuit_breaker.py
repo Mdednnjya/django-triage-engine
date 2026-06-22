@@ -24,6 +24,7 @@ def _cooldown():
 
 
 def allow_request():
+
     try:
         r = _r()
         data = r.hgetall(_KEY)
@@ -40,7 +41,7 @@ def allow_request():
         if time.time() - last_at < _cooldown():
             return False
 
-        # cooldown expired: one worker claims trial slot
+        # trial
         acquired = r.set(_TRIAL_KEY, "1", nx=True, ex=_cooldown())
         return bool(acquired)
 
@@ -50,6 +51,7 @@ def allow_request():
 
 
 def record_success():
+
     r = _r()
     pipe = r.pipeline()
     pipe.hset(_KEY, mapping={"state": "CLOSED", "failure_count": 0})
@@ -58,12 +60,14 @@ def record_success():
 
 
 def record_failure():
+
     r = _r()
     data = r.hgetall(_KEY)
     s = data.get(b"state", b"CLOSED").decode() if data else "CLOSED"
 
     if s == "OPEN":
-        # trial failure: re-open with fresh cooldown, reset count
+
+        # reopen
         pipe = r.pipeline()
         pipe.hset(_KEY, mapping={
             "state": "OPEN",
