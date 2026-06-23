@@ -66,7 +66,7 @@ LLM explanation is stored as structured JSON, not free-form text:
 <details>
 <summary>Dashboard response — enrichment COMPLETED</summary>
 
-![dashboard_completed](./docs/benchmarks/dashboard_completed.png)
+![dashboard_completed](./docs/benchmarks/async-enrichment/dashboard_completed.png)
 
 </details>
 
@@ -93,7 +93,7 @@ thread entirely.
 <details>
 <summary>Locust screenshot</summary>
 
-![sync_loadtest](./docs/benchmarks/sync_loadtest.png)
+![sync_loadtest](./docs/benchmarks/sync/sync_loadtest.png)
 
 </details>
 
@@ -108,14 +108,14 @@ detect the failure pattern and stop hammering it.
 <details>
 <summary>Worker log — 429 retry loop</summary>
 
-![worker_429_retry](./docs/benchmarks/worker_429_retry.png)
+![worker_429_retry](./docs/benchmarks/async-enrichment/worker_429_retry.png)
 
 </details>
 
 <details>
 <summary>Worker log — successful enrichment</summary>
 
-![worker_success](./docs/benchmarks/worker_success.png)
+![worker_success](./docs/benchmarks/async-enrichment/worker_success.png)
 
 </details>
 
