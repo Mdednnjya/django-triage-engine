@@ -10,6 +10,7 @@ class TestEnrichTransaction:
         from apps.transactions.models import Transaction
         from apps.enrichment.tasks import enrich_transaction
 
+        # seed
         transaction = Transaction.objects.create(
             amount=60_000_000,
             currency="IDR",
