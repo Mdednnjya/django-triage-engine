@@ -23,6 +23,7 @@ class Transaction(models.Model):
     reasons = models.JSONField(default=list)
     idempotency_key = models.CharField(max_length=255, unique=True)
     enrichment_queued = models.BooleanField(default=False)
+    request_id = models.CharField(max_length=36, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

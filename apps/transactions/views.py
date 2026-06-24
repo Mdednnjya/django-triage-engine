@@ -30,6 +30,7 @@ class WebhookView(APIView):
         transaction = service.process(
             tx_data=serializer.validated_data,
             idempotency_key=serializer.validated_data["idempotency_key"],
+            request_id=getattr(request, "request_id", ""),
         )
 
         # enqueue
@@ -38,7 +39,7 @@ class WebhookView(APIView):
             with db_transaction.atomic():
                 locked = Transaction.objects.select_for_update().get(id=transaction.id)
                 if not locked.enrichment_queued:
-                    enrich_transaction.delay(str(locked.id))
+                    enrich_transaction.delay(str(locked.id), getattr(request, "request_id", "-"))
                     locked.enrichment_queued = True
                     locked.save(update_fields=["enrichment_queued"])
                     documents.save(
@@ -47,6 +48,8 @@ class WebhookView(APIView):
                         status="QUEUED",
                         model=None,
                     )
+
+        logger.info("webhook processed", extra={"status": transaction.status, "transaction_id": str(transaction.id)})
 
         return Response(
             {

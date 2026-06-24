@@ -4,7 +4,7 @@ from contextvars import ContextVar
 
 request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
 
-_EXTRA_FIELDS = ("status", "duration_ms", "error", "transaction_id")
+_EXTRA_FIELDS = ("status", "duration_ms", "error", "transaction_id", "count")
 
 
 class JsonFormatter(logging.Formatter):

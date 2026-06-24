@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from decouple import config
@@ -12,25 +13,33 @@ logger = logging.getLogger(__name__)
 @app.task
 def reconcile_pending():
 
-    pending = documents.find_pending_older_than(
-        cutoff=datetime.now(timezone.utc) - timedelta(
-            minutes=int(config("RECONCILIATION_THRESHOLD_MINUTES", default=10))
+    from apps.core.logging import request_id_var
+
+    token = request_id_var.set(str(uuid.uuid4()))
+
+    try:
+        pending = documents.find_pending_older_than(
+            cutoff=datetime.now(timezone.utc) - timedelta(
+                minutes=int(config("RECONCILIATION_THRESHOLD_MINUTES", default=10))
+            )
         )
-    )
 
-    if not pending:
-        logger.info("reconciliation: no pending enrichments found")
-        return
+        if not pending:
+            logger.info("reconciliation no pending")
+            return
 
-    if not circuit_breaker.allow_request():
-        logger.info("reconciliation: circuit open, skipping %d pending enrichments", len(pending))
-        return
+        if not circuit_breaker.allow_request():
+            logger.info("reconciliation skipped", extra={"status": "OPEN", "count": len(pending)})
+            return
 
-    from apps.enrichment.tasks import enrich_transaction
+        from apps.enrichment.tasks import enrich_transaction
 
-    for doc in pending:
-        transaction_id = doc["transaction_id"]
-        documents.update_status_if_not_terminal(transaction_id, "QUEUED")
-        enrich_transaction.delay(transaction_id)
+        for doc in pending:
+            transaction_id = doc["transaction_id"]
+            documents.update_status_if_not_terminal(transaction_id, "QUEUED")
+            enrich_transaction.delay(transaction_id)
 
-    logger.info("reconciliation: re-queued %d pending enrichments", len(pending))
+        logger.info("reconciliation requeued", extra={"count": len(pending)})
+
+    finally:
+        request_id_var.reset(token)

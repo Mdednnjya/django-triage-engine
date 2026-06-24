@@ -7,7 +7,7 @@ class TransactionService:
     def __init__(self):
         self.rule_engine = RuleEngine()
 
-    def process(self, tx_data, idempotency_key):
+    def process(self, tx_data, idempotency_key, request_id=""):
 
         # lookup
         existing = IdempotencyKey.objects.select_related("transaction").filter(
@@ -32,6 +32,7 @@ class TransactionService:
             risk_score=verdict.score,
             reasons=verdict.reasons,
             idempotency_key=idempotency_key,
+            request_id=request_id,
         )
 
         IdempotencyKey.objects.create(key=idempotency_key, transaction=transaction)

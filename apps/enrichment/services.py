@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 import requests
 from decouple import config
@@ -31,12 +32,16 @@ class EnrichmentService:
         from apps.enrichment import circuit_breaker
 
         if not circuit_breaker.allow_request():
+            logger.info("circuit open", extra={"transaction_id": str(transaction.id), "status": "PENDING"})
             documents.update_status_if_not_terminal(transaction.id, "PENDING")
             return
 
         try:
+            t0 = time.time()
             explanation = self._call_llm(transaction)
+            duration_ms = int((time.time() - t0) * 1000)
             circuit_breaker.record_success()
+            logger.info("llm completed", extra={"transaction_id": str(transaction.id), "status": "COMPLETED", "duration_ms": duration_ms})
             documents.update(
                 transaction.id,
                 "COMPLETED",
@@ -44,6 +49,7 @@ class EnrichmentService:
                 model=config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
             )
         except Exception:
+            logger.info("llm failed", extra={"transaction_id": str(transaction.id), "status": "FAILED"})
             circuit_breaker.record_failure()
             raise
 
