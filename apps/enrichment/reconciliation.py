@@ -39,6 +39,8 @@ def reconcile_pending():
             documents.update_status_if_not_terminal(transaction_id, "QUEUED")
             enrich_transaction.delay(transaction_id)
 
+        from apps.core.metrics import reconciliation_requeued_total
+        reconciliation_requeued_total.inc(len(pending))
         logger.info("reconciliation requeued", extra={"count": len(pending)})
 
     finally:

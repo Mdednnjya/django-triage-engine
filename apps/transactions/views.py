@@ -51,6 +51,9 @@ class WebhookView(APIView):
 
         logger.info("webhook processed", extra={"status": transaction.status, "transaction_id": str(transaction.id)})
 
+        from apps.core.metrics import webhook_requests_total
+        webhook_requests_total.labels(status=transaction.status).inc()
+
         return Response(
             {
                 "transaction_id": str(transaction.id),

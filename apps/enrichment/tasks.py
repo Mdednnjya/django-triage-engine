@@ -30,6 +30,8 @@ def enrich_transaction(self, transaction_id, request_id="-"):
 
         if self.request.retries >= self.max_retries:
             # exhausted
+            from apps.core.metrics import enrichment_status_total
+            enrichment_status_total.labels(status="FAILED").inc()
             logger.info("enrichment failed", extra={"transaction_id": transaction_id, "status": "FAILED"})
             documents.update(transaction_id, "FAILED")
 

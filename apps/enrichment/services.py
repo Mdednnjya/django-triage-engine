@@ -31,16 +31,22 @@ class EnrichmentService:
 
         from apps.enrichment import circuit_breaker
 
+        from apps.core.metrics import enrichment_duration_seconds, enrichment_status_total
+
         if not circuit_breaker.allow_request():
             logger.info("circuit open", extra={"transaction_id": str(transaction.id), "status": "PENDING"})
+            enrichment_status_total.labels(status="PENDING").inc()
             documents.update_status_if_not_terminal(transaction.id, "PENDING")
             return
 
         try:
             t0 = time.time()
             explanation = self._call_llm(transaction)
-            duration_ms = int((time.time() - t0) * 1000)
+            elapsed = time.time() - t0
+            duration_ms = int(elapsed * 1000)
             circuit_breaker.record_success()
+            enrichment_duration_seconds.observe(elapsed)
+            enrichment_status_total.labels(status="COMPLETED").inc()
             logger.info("llm completed", extra={"transaction_id": str(transaction.id), "status": "COMPLETED", "duration_ms": duration_ms})
             documents.update(
                 transaction.id,
