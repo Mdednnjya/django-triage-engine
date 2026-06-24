@@ -1,3 +1,5 @@
+import logging
+
 from django.db import transaction as db_transaction
 
 from rest_framework.views import APIView
@@ -9,6 +11,7 @@ from apps.transactions.serializers import WebhookSerializer
 from apps.transactions.services import TransactionService
 from apps.enrichment import documents
 
+logger = logging.getLogger(__name__)
 
 FLAGGED = {"NEEDS_REVIEW", "AUTO_BLOCK"}
 
@@ -16,6 +19,8 @@ FLAGGED = {"NEEDS_REVIEW", "AUTO_BLOCK"}
 class WebhookView(APIView):
 
     def post(self, request):
+
+        logger.info("webhook received", extra={"status": "received"})
 
         serializer = WebhookSerializer(data=request.data)
         if not serializer.is_valid():
