@@ -29,13 +29,13 @@ services:
       - "6379:6379"
 
   app:
-  
+
     build: .
     command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "8000:8000"
     env_file: .env
-    
+
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -64,6 +64,53 @@ services:
       - mongo
       - redis
 
+  beat:
+
+    build: .
+    command: celery -A config beat --loglevel=info
+    env_file: .env
+
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      MONGO_URI: mongodb://mongo:27017/pytriage
+
+    depends_on:
+      - postgres
+      - mongo
+      - redis
+
+  prometheus:
+
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    depends_on:
+      - app
+
+  grafana:
+
+    image: grafana/grafana:10.4.2
+    ports:
+      - "3000:3000"
+
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   mongo_data:
+  grafana_data:
