@@ -10,9 +10,11 @@
       "id": 1,
       "title": "Webhook Requests",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "sum by (status) (webhook_requests_total)",
           "legendFormat": "{{ status }}",
           "refId": "A"
@@ -29,9 +31,11 @@
       "id": 2,
       "title": "Enrichment Status",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "sum by (status) (enrichment_status_total)",
           "legendFormat": "{{ status }}",
           "refId": "A"
@@ -48,9 +52,11 @@
       "id": 3,
       "title": "Circuit Breaker State",
       "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "circuit_breaker_state",
           "legendFormat": "state",
           "refId": "A"
@@ -86,14 +92,17 @@
       "id": 4,
       "title": "LLM Call Duration (p50 / p95)",
       "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "histogram_quantile(0.5, rate(enrichment_duration_seconds_bucket[5m]))",
           "legendFormat": "p50",
           "refId": "A"
         },
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "histogram_quantile(0.95, rate(enrichment_duration_seconds_bucket[5m]))",
           "legendFormat": "p95",
           "refId": "B"
@@ -108,9 +117,11 @@
       "id": 5,
       "title": "Reconciliation Re-queued",
       "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "reconciliation_requeued_total",
           "legendFormat": "total",
           "refId": "A"
@@ -127,9 +138,11 @@
       "id": 6,
       "title": "Celery Queue Depth",
       "type": "gauge",
+      "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
       "targets": [
         {
+          "datasource": { "type": "prometheus", "uid": "triage-prometheus" },
           "expr": "celery_queue_depth",
           "legendFormat": "depth",
           "refId": "A"

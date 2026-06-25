@@ -9,11 +9,17 @@ class RequestIdMiddleware:
 
     def __call__(self, request):
 
+        # generate
         request_id = str(uuid.uuid4())
+
+        # attach
         request.request_id = request_id
+        
+        # scope
         token = request_id_var.set(request_id)
 
         response = self.get_response(request)
 
+        # cleanup
         request_id_var.reset(token)
         return response

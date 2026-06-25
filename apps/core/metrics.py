@@ -1,3 +1,4 @@
+import os
 import redis as redis_lib
 from decouple import config
 from prometheus_client import Counter, Histogram, REGISTRY
@@ -33,8 +34,12 @@ class _CircuitBreakerCollector:
 
         try:
             r = redis_lib.from_url(config("REDIS_URL", default="redis://localhost:6379/0"))
+            
+            # fetch
             data = r.hgetall("circuit_breaker:llm")
             state = data.get(b"state", b"CLOSED").decode() if data else "CLOSED"
+
+            # encode
             value = 1.0 if state == "OPEN" else 0.0
         except Exception:
             value = 0.0
@@ -50,7 +55,10 @@ class _CeleryQueueDepthCollector:
 
         try:
             r = redis_lib.from_url(config("REDIS_URL", default="redis://localhost:6379/0"))
+
+            # depth
             depth = float(r.llen("celery"))
+
         except Exception:
             depth = 0.0
 
@@ -59,5 +67,7 @@ class _CeleryQueueDepthCollector:
         yield g
 
 
-REGISTRY.register(_CircuitBreakerCollector())
-REGISTRY.register(_CeleryQueueDepthCollector())
+# single
+if not os.environ.get("PROMETHEUS_MULTIPROC_DIR"):
+    REGISTRY.register(_CircuitBreakerCollector())
+    REGISTRY.register(_CeleryQueueDepthCollector())

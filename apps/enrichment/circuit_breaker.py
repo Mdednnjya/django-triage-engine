@@ -37,6 +37,7 @@ def allow_request():
         if s == "CLOSED":
             return True
 
+        # cooldown expired: attempt trial
         last_at = float(data.get(b"last_failure_at", 0))
         if time.time() - last_at < _cooldown():
             return False
@@ -53,6 +54,7 @@ def allow_request():
 def record_success():
 
     r = _r()
+    # reset
     pipe = r.pipeline()
     pipe.hset(_KEY, mapping={"state": "CLOSED", "failure_count": 0})
     pipe.delete(_TRIAL_KEY)
@@ -78,8 +80,10 @@ def record_failure():
         pipe.execute()
         return
 
+    # increment
     new_count = int(r.hincrby(_KEY, "failure_count", 1))
     if new_count >= _threshold():
+        # open
         r.hset(_KEY, mapping={
             "state": "OPEN",
             "last_failure_at": str(time.time()),

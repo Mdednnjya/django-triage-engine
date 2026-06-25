@@ -13,6 +13,7 @@ def enrich_transaction(self, transaction_id, request_id="-"):
     from apps.transactions.models import Transaction
     from apps.core.logging import request_id_var
 
+    # propagate
     token = request_id_var.set(request_id)
 
     try:
@@ -29,8 +30,10 @@ def enrich_transaction(self, transaction_id, request_id="-"):
     except Exception as exc:
 
         if self.request.retries >= self.max_retries:
-            # exhausted
+
             from apps.core.metrics import enrichment_status_total
+            
+            # exhausted
             enrichment_status_total.labels(status="FAILED").inc()
             logger.info("enrichment failed", extra={"transaction_id": transaction_id, "status": "FAILED"})
             documents.update(transaction_id, "FAILED")
@@ -39,4 +42,5 @@ def enrich_transaction(self, transaction_id, request_id="-"):
             raise self.retry(exc=exc, countdown=60)
 
     finally:
+        # cleanup
         request_id_var.reset(token)

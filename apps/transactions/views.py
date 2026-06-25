@@ -22,10 +22,12 @@ class WebhookView(APIView):
 
         logger.info("webhook received", extra={"status": "received"})
 
+        # validate bad request
         serializer = WebhookSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # proccess
         service = TransactionService()
         transaction = service.process(
             tx_data=serializer.validated_data,
@@ -35,12 +37,17 @@ class WebhookView(APIView):
 
         # enqueue
         if transaction.status in FLAGGED:
+
             from apps.enrichment.tasks import enrich_transaction
+
+            # lock
             with db_transaction.atomic():
                 locked = Transaction.objects.select_for_update().get(id=transaction.id)
+
                 if not locked.enrichment_queued:
                     enrich_transaction.delay(str(locked.id), getattr(request, "request_id", "-"))
                     locked.enrichment_queued = True
+                    
                     locked.save(update_fields=["enrichment_queued"])
                     documents.save(
                         transaction_id=locked.id,

@@ -40,11 +40,15 @@ class EnrichmentService:
             return
 
         try:
+
+            # time
             t0 = time.time()
             explanation = self._call_llm(transaction)
             elapsed = time.time() - t0
             duration_ms = int(elapsed * 1000)
             circuit_breaker.record_success()
+
+            # observe
             enrichment_duration_seconds.observe(elapsed)
             enrichment_status_total.labels(status="COMPLETED").inc()
             logger.info("llm completed", extra={"transaction_id": str(transaction.id), "status": "COMPLETED", "duration_ms": duration_ms})
@@ -82,6 +86,8 @@ class EnrichmentService:
 
 
         response.raise_for_status()
+
+        # extract
         content = response.json()["choices"][0]["message"]["content"].strip()
 
         # strip markdown code fences if model ignores instruction

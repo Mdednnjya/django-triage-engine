@@ -15,6 +15,7 @@ def reconcile_pending():
 
     from apps.core.logging import request_id_var
 
+    # run id
     token = request_id_var.set(str(uuid.uuid4()))
 
     try:
@@ -28,6 +29,7 @@ def reconcile_pending():
             logger.info("reconciliation no pending")
             return
 
+        # gate
         if not circuit_breaker.allow_request():
             logger.info("reconciliation skipped", extra={"status": "OPEN", "count": len(pending)})
             return
@@ -36,6 +38,7 @@ def reconcile_pending():
 
         for doc in pending:
             transaction_id = doc["transaction_id"]
+            # requeue
             documents.update_status_if_not_terminal(transaction_id, "QUEUED")
             enrich_transaction.delay(transaction_id)
 
