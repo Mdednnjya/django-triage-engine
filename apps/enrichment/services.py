@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 import requests
 from decouple import config
@@ -30,13 +31,27 @@ class EnrichmentService:
 
         from apps.enrichment import circuit_breaker
 
+        from apps.core.metrics import enrichment_duration_seconds, enrichment_status_total
+
         if not circuit_breaker.allow_request():
+            logger.info("circuit open", extra={"transaction_id": str(transaction.id), "status": "PENDING"})
+            enrichment_status_total.labels(status="PENDING").inc()
             documents.update_status_if_not_terminal(transaction.id, "PENDING")
             return
 
         try:
+
+            # time
+            t0 = time.time()
             explanation = self._call_llm(transaction)
+            elapsed = time.time() - t0
+            duration_ms = int(elapsed * 1000)
             circuit_breaker.record_success()
+
+            # observe
+            enrichment_duration_seconds.observe(elapsed)
+            enrichment_status_total.labels(status="COMPLETED").inc()
+            logger.info("llm completed", extra={"transaction_id": str(transaction.id), "status": "COMPLETED", "duration_ms": duration_ms})
             documents.update(
                 transaction.id,
                 "COMPLETED",
@@ -44,6 +59,7 @@ class EnrichmentService:
                 model=config("OPENROUTER_MODEL", default="mistral/mistral-7b-instruct"),
             )
         except Exception:
+            logger.info("llm failed", extra={"transaction_id": str(transaction.id), "status": "FAILED"})
             circuit_breaker.record_failure()
             raise
 
@@ -70,6 +86,8 @@ class EnrichmentService:
 
 
         response.raise_for_status()
+
+        # extract
         content = response.json()["choices"][0]["message"]["content"].strip()
 
         # strip markdown code fences if model ignores instruction

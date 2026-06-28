@@ -20,6 +20,8 @@ class RiskVerdict:
     reasons: list = field(default_factory=list)
 
 
+# the rule engine for upcoming transaction
+
 class AmountRule:
 
     def evaluate(self, tx_data):
@@ -80,6 +82,7 @@ class RuleEngine:
 
     def evaluate(self, tx_data):
 
+        # evaluate
         results = [rule.evaluate(tx_data) for rule in self.rules]
         score = sum(r.weight for r in results if r.triggered)
         reasons = [r.reason for r in results if r.triggered]

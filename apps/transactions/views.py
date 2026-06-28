@@ -1,3 +1,5 @@
+import logging
+
 from django.db import transaction as db_transaction
 
 from rest_framework.views import APIView
@@ -9,6 +11,7 @@ from apps.transactions.serializers import WebhookSerializer
 from apps.transactions.services import TransactionService
 from apps.enrichment import documents
 
+logger = logging.getLogger(__name__)
 
 FLAGGED = {"NEEDS_REVIEW", "AUTO_BLOCK"}
 
@@ -17,24 +20,34 @@ class WebhookView(APIView):
 
     def post(self, request):
 
+        logger.info("webhook received", extra={"status": "received"})
+
+        # validate bad request
         serializer = WebhookSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # proccess
         service = TransactionService()
         transaction = service.process(
             tx_data=serializer.validated_data,
             idempotency_key=serializer.validated_data["idempotency_key"],
+            request_id=getattr(request, "request_id", ""),
         )
 
         # enqueue
         if transaction.status in FLAGGED:
+
             from apps.enrichment.tasks import enrich_transaction
+
+            # lock
             with db_transaction.atomic():
                 locked = Transaction.objects.select_for_update().get(id=transaction.id)
+
                 if not locked.enrichment_queued:
-                    enrich_transaction.delay(str(locked.id))
+                    enrich_transaction.delay(str(locked.id), getattr(request, "request_id", "-"))
                     locked.enrichment_queued = True
+                    
                     locked.save(update_fields=["enrichment_queued"])
                     documents.save(
                         transaction_id=locked.id,
@@ -42,6 +55,11 @@ class WebhookView(APIView):
                         status="QUEUED",
                         model=None,
                     )
+
+        logger.info("webhook processed", extra={"status": transaction.status, "transaction_id": str(transaction.id)})
+
+        from apps.core.metrics import webhook_requests_total
+        webhook_requests_total.labels(status=transaction.status).inc()
 
         return Response(
             {

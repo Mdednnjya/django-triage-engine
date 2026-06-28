@@ -25,12 +25,14 @@ when something went wrong.
 Request flow with layered separation:
 - View — HTTP handler, validates request, returns 202 immediately
 - Service — rule engine evaluation, idempotency check, enqueue logic
-- Task — Celery async worker, LLM call, enrichment persistence
+- Task — Celery async worker, circuit breaker check, LLM call, enrichment persistence
+- Beat — reconciliation job every 5 minutes; re-queues stale PENDING when circuit closed
 - Repository — PostgreSQL via Django ORM, MongoDB via pymongo
+- Observability — Prometheus metrics scrape; Grafana dashboard
 
 ## Tech Stack
 
-Python 3.12 · Django 5 · Django REST Framework · Celery · Redis · PostgreSQL · MongoDB · Docker · Docker Compose
+Python 3.12 · Django 5 · Django REST Framework · Celery · Redis · PostgreSQL · MongoDB · Prometheus · Grafana · Docker · Docker Compose
 
 ## What's Implemented
 
@@ -40,7 +42,7 @@ Python 3.12 · Django 5 · Django REST Framework · Celery · Redis · PostgreSQ
 - Celery async worker decouples LLM enrichment from request thread; enrichment state machine: QUEUED; PROCESSING; COMPLETED; FAILED; PENDING
 - Redis-backed circuit breaker with HALF-OPEN trial lock; graceful degradation to PENDING when circuit open
 - Reconciliation job via Celery beat; re-queues stale PENDING enrichments when circuit closed
-- Polyglot persistence: PostgreSQL for transactions; MongoDB for enrichment documents; joined at application layer
+- Polyglot persistence: PostgreSQL for transactions; MongoDB for enrichment documents; joined at application layer; Prometheus metrics and Grafana dashboard instrument the full pipeline
 
 ## Engineering Decisions
 
@@ -54,6 +56,7 @@ Python 3.12 · Django 5 · Django REST Framework · Celery · Redis · PostgreSQ
 | LLM dependency throttled or down | Blind retry storm; worker queue backs up | Circuit breaker opens after N failures; fail-fast returns PENDING |
 | Circuit OPEN leaves PENDING enrichments permanently | Dashboard shows stale state indefinitely | Reconciliation job re-queues PENDING when circuit CLOSED; eventual completeness |
 | Multiple workers race on HALF-OPEN trial | Two workers both attempt trial LLM call | Redis SET NX EX trial lock; only one worker proceeds |
+| Pipeline blind under async load | No visibility into bottleneck location | request_id flows end-to-end; Prometheus metrics per stage; Grafana dashboard |
 
 ## Enrichment Output
 
@@ -103,7 +106,7 @@ exhaustion means most requests never reach the rule engine.
 <details>
 <summary>Locust screenshot</summary>
 
-![sync_loadtest](./docs/benchmarks/sync/sync_loadtest.png)
+![sync_loadtest](./docs/benchmarks/sync-baseline/sync_loadtest.png)
 
 </details>
 
@@ -155,6 +158,47 @@ stale PENDING enrichments automatically.
 <summary>Worker log — reconciliation re-queued pending enrichments</summary>
 
 ![reconciliation_requeue](./docs/benchmarks/fault-tolerance/reconciliation_requeue.png)
+
+</details>
+
+## Observability
+
+Structured logging with request_id flowing end-to-end from webhook
+ingestion through Celery worker to LLM call. Every log line is JSON
+with consistent fields: timestamp, level, request_id, event, status,
+duration_ms. Six Prometheus metrics expose pipeline health in real time;
+Grafana dashboard visualizes all six panels with 10s refresh.
+
+Under 500 concurrent users, Grafana captured LLM call duration spiking
+from 5s baseline to p95 of 25s, reconciliation job re-queuing 47 stale
+PENDING enrichments, and queue depth draining to 0 as the system
+recovered without intervention.
+
+<details>
+<summary>Structured log — request_id end-to-end</summary>
+
+![structured_log](./docs/benchmarks/observability/structured_log.png)
+
+</details>
+
+<details>
+<summary>Prometheus metrics — /metrics endpoint</summary>
+
+![prometheus_metrics](./docs/benchmarks/observability/prometheus_metrics.png)
+
+</details>
+
+<details>
+<summary>Grafana dashboard — under load</summary>
+
+![grafana_dashboard_load](./docs/benchmarks/observability/grafana_dashboard_load.jpeg)
+
+</details>
+
+<details>
+<summary>Grafana dashboard — after reconciliation</summary>
+
+![grafana_dashboard_recovered](./docs/benchmarks/observability/grafana_dashboard_recovered.png)
 
 </details>
 
